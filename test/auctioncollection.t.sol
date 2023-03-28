@@ -5,10 +5,10 @@ import "forge-std/Test.sol";
 import "../src/auctioncollection.sol";
 
 contract CounterTest is Test {
-    Counter public counter;
+    AuctionCollection public counter;
 
     function setUp() public {
-        counter = new Counter();
+        counter = new AuctionCollection();
         counter.setNumber(0);
     }
 
