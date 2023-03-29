@@ -7,8 +7,13 @@ contract AuctionCollection is Ownable {
 
     struct Bidder {
         bool isWinner;
-        address bidder;
-        string btcAddr;
+        mapping(address => uint256) bidderAmount;
+        uint256 amount;
+    }
+
+    struct BidderResponse {
+        string btcAddress;
+        bool isWinner;
         uint256 amount;
     }
 
@@ -32,13 +37,13 @@ contract AuctionCollection is Ownable {
     }
 
     //    Bid(btc address, eth amount) // check min bid amount
-    function bid(string calldata btcAddr, address bidder) external payable {
+    function bid(string calldata btcAddr) external payable {
         uint256 bidAmount = msg.value;
+        address bidder = msg.sender;
         require(bytes(btcAddr).length != 0 && bidAmount >= bidMinimum && block.number < endTime, "AUC: btc address mut be not null and bid amount greater than minimum");
-        if (bidders[btcAddr].amount == 0) {
-            bidders[btcAddr] = Bidder(false, bidder, btcAddr, bidAmount);
-        } else {
+        unchecked {
             bidders[btcAddr].amount += bidAmount;
+            bidders[btcAddr].bidderAmount[bidder] += bidAmount;
         }
 
         if (!isBtcExisted[btcAddr]) {
@@ -78,13 +83,14 @@ contract AuctionCollection is Ownable {
         // the auction must end to be able claim eth back
         require(block.number >= endTime && winnerDeclared, "AUC: withdraw only after end time and winner declared");
         require(!bidders[btcAddr].isWinner, "AUC: must be not a winner");
-
-        uint256 refundAmount = bidders[btcAddr].amount;
-        bidders[btcAddr].amount = 0;
-        (bool success, ) = bidders[btcAddr].bidder.call{value: refundAmount}("");
+        address bidder = msg.sender;
+        uint256 refundAmount = bidders[btcAddr].bidderAmount[bidder];
+        bidders[btcAddr].amount -= refundAmount;
+        bidders[btcAddr].bidderAmount[bidder] = 0;
+        (bool success, ) = bidder.call{value: refundAmount}("");
         require(success, "AUC: failed to refund");
 
-        emit Refund(bidders[btcAddr].bidder, refundAmount);
+        emit Refund(bidder, refundAmount);
     }
 
     // get total bids
@@ -93,17 +99,22 @@ contract AuctionCollection is Ownable {
     }
 
     // ListBids()
-    function listBids(uint256 start, uint256 end) external view returns(Bidder[] memory) {
+    function listBids(uint256 start, uint256 end) external view returns(BidderResponse[] memory) {
         require(end < btcAddresses.length, "AUC: invalid index");
-        Bidder[] memory temp = new Bidder[](end - start);
+        BidderResponse[] memory temp = new BidderResponse[](end - start);
         for (uint i = start; i < end; i++) {
-            temp[i] = bidders[btcAddresses[i]];
+            temp[i] = BidderResponse(btcAddresses[i], bidders[btcAddresses[i]].isWinner, bidders[btcAddresses[i]].amount);
         }
         return temp;
     }
 
     //  GetBidsByAddress()
-    function getBidsByAddress(string calldata btcAddr) external view returns(Bidder memory) {
-        return bidders[btcAddr];
+    function getBidsByAddress(string calldata btcAddr) external view returns(bool, uint256) {
+        return (bidders[btcAddr].isWinner, bidders[btcAddr].amount);
+    }
+
+    // get total bid by  btc-eth address
+    function getBidsByAddress(string calldata btcAddr, address bidder) external view returns(uint256) {
+        return bidders[btcAddr].bidderAmount[bidder];
     }
 }

@@ -21,27 +21,30 @@ contract AuctionCollectionTest is Test {
             user = address(uint160(i));
             vm.prank(user);
             vm.deal(user, i * 1e10);
-            ac.bid{value: i * 1e10}(btcAddr, user);
+            ac.bid{value: i * 1e10}(btcAddr);
         }
         assertEq(ac.totalBids(), 521);
-        AuctionCollection.Bidder memory tmp = ac.getBidsByAddress(numberToString(1));
-        assertEq(tmp.btcAddr, numberToString(1));
-        assertEq(tmp.bidder, address(uint160(1)));
-        assertEq(tmp.amount, 1e10);
+        (bool isWinner, uint256 bidAmount) = ac.getBidsByAddress(numberToString(1));
+        assertEq(isWinner, false);
+        assertEq(bidAmount, 1e10);
+        assertEq(ac.getBidsByAddress(numberToString(1), address(uint160(1))), 1e10);
 
         user = address(uint160(1));
         vm.prank(user);
         vm.deal(user, 1e10);
         vm.expectRevert("AUC: btc address mut be not null and bid amount greater than minimum");
-        ac.bid{value: 1e10}("", user);
+        ac.bid{value: 1e10}("");
 
+        user = address(uint160(2000));
         vm.prank(user);
-        ac.bid{value: 1e10}(numberToString(1), user);
+        vm.deal(user, 1e10);
+        ac.bid{value: 1e10}(numberToString(1));
 
-        tmp = ac.getBidsByAddress(numberToString(1));
-        assertEq(tmp.btcAddr, numberToString(1));
-        assertEq(tmp.bidder, address(uint160(1)));
-        assertEq(tmp.amount, 2e10);
+        (isWinner, bidAmount) = ac.getBidsByAddress(numberToString(1));
+        assertEq(isWinner, false);
+        assertEq(bidAmount, 2e10);
+        assertEq(ac.getBidsByAddress(numberToString(1), user), 1e10);
+        assertEq(ac.getBidsByAddress(numberToString(1), address(uint160(1))), 1e10);
 
         // roll to end time
         vm.roll(1001);
@@ -49,7 +52,7 @@ contract AuctionCollectionTest is Test {
         vm.prank(user);
         vm.deal(user, 1e10);
         vm.expectRevert("AUC: btc address mut be not null and bid amount greater than minimum");
-        ac.bid{value: 1e10}(numberToString(523), user);
+        ac.bid{value: 1e10}(numberToString(523));
 
         // declare winners
         uint256 verifyWithdrawAmount = 1e10;
@@ -74,8 +77,8 @@ contract AuctionCollectionTest is Test {
         winners[1] = numberToString(2);
         ac.declareWinners(winners);
 
-        tmp = ac.getBidsByAddress(numberToString(1));
-        assertEq(tmp.isWinner, true);
+        (isWinner,)  = ac.getBidsByAddress(numberToString(1));
+        assertEq(isWinner, true);
 
         // withdraw payments
         address payable receiver = payable(address(uint160(1000)));
