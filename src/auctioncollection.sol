@@ -84,7 +84,7 @@ contract AuctionCollection is Ownable {
         (bool success, ) = bidders[btcAddr].bidder.call{value: refundAmount}("");
         require(success, "AUC: failed to refund");
 
-        emit Refund(msg.sender, refundAmount);
+        emit Refund(bidders[btcAddr].bidder, refundAmount);
     }
 
     // get total bids
