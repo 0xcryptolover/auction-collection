@@ -5,72 +5,86 @@ import "openzeppelin-contracts/contracts/access/Ownable.sol";
 contract AuctionCollection is Ownable {
     uint256 public constant MAX_WINNERS = 512;
 
-    struct Bidder {
+    struct BidderResponse {
+        address bidder;
         bool isWinner;
-        mapping(address => uint256) bidderAmount;
         uint256 amount;
     }
 
-    struct BidderResponse {
-        string btcAddress;
-        bool isWinner;
+    struct Bidder {
         uint256 amount;
+        uint16 index;
     }
 
     // vars
     uint256 public endTime;
     uint256 public bidMinimum;
     uint256 private totalPaymentWithdraw;
-    mapping(string => Bidder) private bidders;
     bool private winnerDeclared;
-    mapping(string => bool) private isBtcExisted;
-    string[] private btcAddresses;
+    mapping(address => Bidder) private bidders;
+    mapping(address => bool) private isAccountExisted;
+    address[] private ethAddresses;
+    bytes private winners;
 
     // events
-    event Bid(address, string, uint256);
+    event Bid(address, uint256);
     event Refund(address, uint256);
 
     constructor(uint256 endTime_, uint256 bidMinimum_) {
-        require(endTime_ > block.number, "AUC: invalid config params");
+        require(endTime_ > block.timestamp, "AUC: invalid config params");
         endTime = endTime_;
         bidMinimum = bidMinimum_;
     }
 
     //    Bid(btc address, eth amount) // check min bid amount
-    function bid(string calldata btcAddr) external payable {
+    function bid() external payable {
         uint256 bidAmount = msg.value;
         address bidder = msg.sender;
-        require(bytes(btcAddr).length != 0 && bidAmount >= bidMinimum && block.number < endTime, "AUC: btc address mut be not null and bid amount greater than minimum");
+        require(bidAmount >= bidMinimum && block.timestamp < endTime, "AUC: btc address mut be not null and bid amount greater than minimum");
         unchecked {
-            bidders[btcAddr].amount += bidAmount;
-            bidders[btcAddr].bidderAmount[bidder] += bidAmount;
+            bidders[bidder].amount += bidAmount;
         }
 
-        if (!isBtcExisted[btcAddr]) {
-            btcAddresses.push(btcAddr);
+        if (!isAccountExisted[bidder]) {
+            isAccountExisted[bidder] = true;
+            ethAddresses.push(bidder);
+            bidders[bidder].index = uint16(ethAddresses.length);
         }
 
-        emit Bid(bidder, btcAddr, bidAmount);
+        emit Bid(bidder, bidAmount);
     }
 
     // declare winners
-    function declareWinners(string[] memory winners) external onlyOwner {
-        require(block.number >= endTime,"AUC: auction not end yet");
-        require(winners.length < MAX_WINNERS,"AUC: too many winners");
+    function declareWinners(uint16[] memory winnerList, bool isFinal) external onlyOwner {
+        require(block.timestamp >= endTime && !winnerDeclared,"AUC: auction not end yet or winner declared");
+        require(winnerList.length <= MAX_WINNERS ,"AUC: too many winners");
         uint256 _totalPaymentWithdraw;
-        for (uint256 i = 0; i < winners.length; i++) {
-            Bidder storage tmpBidder = bidders[winners[i]];
-            require(!tmpBidder.isWinner && tmpBidder.amount > 0, "AUC: duplicate winner or invalid");
-            _totalPaymentWithdraw += tmpBidder.amount;
-            tmpBidder.isWinner = true;
+        for (uint256 i = 0; i < winnerList.length; i++) {
+            address temp = ethAddresses[winnerList[i]];
+            require(temp != address(0), "AUC: duplicate winner");
+            ethAddresses[winnerList[i]] = address(0);
+            _totalPaymentWithdraw += bidders[temp].amount;
         }
-        winnerDeclared = true;
-        totalPaymentWithdraw = _totalPaymentWithdraw;
+        winnerDeclared = isFinal;
+        totalPaymentWithdraw += _totalPaymentWithdraw;
     }
 
-    //    WithdrawPayment()
+    //    function isBitSet(uint8 b, uint8 pos) public pure returns(bool) {
+    //        return ((b >> pos) & 1) == 1;
+    //    }
+
+    function isWinner(address bidder) internal view returns(bool) {
+        uint16 bidderIndex = bidders[bidder].index;
+        if (!winnerDeclared || bidderIndex == 0) {
+            return false;
+        }
+        // return isBitSet(winners[bidderIndex / 8], bidderIndex % 8);
+        return ethAddresses[bidders[bidder].index - 1] == address(0);
+    }
+
+    //  WithdrawPayment()
     function withdrawPayment(address payable receiver) external onlyOwner {
-        require(block.number >= endTime, "AUC: withdraw only after end time");
+        require(block.timestamp >= endTime, "AUC: withdraw only after end time");
         require(totalPaymentWithdraw > 0 && winnerDeclared, "AUC: nothing to withdraw or winners not declared");
         uint256 amount = totalPaymentWithdraw;
         totalPaymentWithdraw = 0;
@@ -78,15 +92,14 @@ contract AuctionCollection is Ownable {
         require(success, "AUC: failed to withdraw");
     }
 
-    //    Refund()
-    function refund(string calldata btcAddr) external {
+    //  Refund()
+    function refund() external {
         // the auction must end to be able claim eth back
-        require(block.number >= endTime && winnerDeclared, "AUC: withdraw only after end time and winner declared");
-        require(!bidders[btcAddr].isWinner, "AUC: must be not a winner");
+        require(block.timestamp >= endTime && winnerDeclared, "AUC: withdraw only after end time and winner declared");
         address bidder = msg.sender;
-        uint256 refundAmount = bidders[btcAddr].bidderAmount[bidder];
-        bidders[btcAddr].amount -= refundAmount;
-        bidders[btcAddr].bidderAmount[bidder] = 0;
+        require(!isWinner(bidder), "AUC: must be not a winner");
+        uint256 refundAmount = bidders[bidder].amount;
+        bidders[bidder].amount = 0;
         (bool success, ) = bidder.call{value: refundAmount}("");
         require(success, "AUC: failed to refund");
 
@@ -95,26 +108,22 @@ contract AuctionCollection is Ownable {
 
     // get total bids
     function totalBids() external view returns(uint256) {
-        return btcAddresses.length;
+        return ethAddresses.length;
     }
 
     // ListBids()
     function listBids(uint256 start, uint256 end) external view returns(BidderResponse[] memory) {
-        require(end < btcAddresses.length, "AUC: invalid index");
+        require(end < ethAddresses.length, "AUC: invalid index");
         BidderResponse[] memory temp = new BidderResponse[](end - start);
         for (uint i = start; i < end; i++) {
-            temp[i] = BidderResponse(btcAddresses[i], bidders[btcAddresses[i]].isWinner, bidders[btcAddresses[i]].amount);
+            address tmp = ethAddresses[i];
+            temp[i] = BidderResponse(tmp, isWinner(tmp), bidders[tmp].amount);
         }
         return temp;
     }
 
     //  GetBidsByAddress()
-    function getBidsByAddress(string calldata btcAddr) external view returns(bool, uint256) {
-        return (bidders[btcAddr].isWinner, bidders[btcAddr].amount);
-    }
-
-    // get total bid by  btc-eth address
-    function getBidsByAddress(string calldata btcAddr, address bidder) external view returns(uint256) {
-        return bidders[btcAddr].bidderAmount[bidder];
+    function getBidsByAddress(address bidder) external view returns(bool, uint256) {
+        return (isWinner(bidder), bidders[bidder].amount);
     }
 }
