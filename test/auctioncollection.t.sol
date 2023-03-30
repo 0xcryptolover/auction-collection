@@ -30,7 +30,7 @@ contract AuctionCollectionTest is Test {
         user = address(uint160(1));
         vm.prank(user);
         vm.deal(user, 1e1);
-        vm.expectRevert("AUC: auction be must open and bid amount greater than minimum");
+        vm.expectRevert("AUC: auction must be open and bid amount greater than minimum");
         ac.bid{value: 1e1}();
 
         user = address(uint160(2000));
@@ -47,7 +47,7 @@ contract AuctionCollectionTest is Test {
         user = address(uint160(523));
         vm.prank(user);
         vm.deal(user, 1e10);
-        vm.expectRevert("AUC: auction be must open and bid amount greater than minimum");
+        vm.expectRevert("AUC: auction must be open and bid amount greater than minimum");
         ac.bid{value: 1e10}();
 
         // declare winners
