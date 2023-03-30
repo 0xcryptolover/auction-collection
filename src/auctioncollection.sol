@@ -39,7 +39,7 @@ contract AuctionCollection is Ownable {
     function bid() external payable {
         uint256 bidAmount = msg.value;
         address bidder = msg.sender;
-        require(bidAmount >= bidMinimum && block.timestamp < endTime, "AUC: auction be must open and bid amount greater than minimum");
+        require(bidAmount >= bidMinimum && block.timestamp < endTime, "AUC: auction must be open and bid amount greater than minimum");
         unchecked {
             bidders[bidder].amount += bidAmount;
         }
