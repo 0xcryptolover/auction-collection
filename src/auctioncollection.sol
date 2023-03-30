@@ -20,7 +20,7 @@ contract AuctionCollection is Ownable {
     uint256 public endTime;
     uint256 public bidMinimum;
     uint256 private totalPaymentWithdraw;
-    bool private winnerDeclared;
+    bool public winnerDeclared;
     mapping(address => Bidder) private bidders;
     mapping(address => bool) private isAccountExisted;
     address[] private ethAddresses;
