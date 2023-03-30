@@ -112,7 +112,7 @@ contract AuctionCollection is Ownable {
 
     // ListBids()
     function listBids(uint256 start, uint256 end) external view returns(BidderResponse[] memory) {
-        require(end < ethAddresses.length, "AUC: invalid index");
+        require(end <= ethAddresses.length, "AUC: invalid index");
         BidderResponse[] memory temp = new BidderResponse[](end - start);
         for (uint i = start; i < end; i++) {
             address tmp = ethAddresses[i];
