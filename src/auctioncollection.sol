@@ -123,6 +123,7 @@ contract AuctionCollection is Ownable {
 
     //  GetBidsByAddress()
     function getBidsByAddress(address bidder) external view returns(bool, uint256) {
+        require(bidders[bidder].index != 0, "AUC: user did not bid yet");
         return (isWinner(bidder), bidders[bidder].amount);
     }
 }

@@ -105,5 +105,8 @@ contract AuctionCollectionTest is Test {
 
         // test get functions
         ac.listBids(0, 100);
+
+        vm.expectRevert("AUC: user did not bid yet");
+        ac.getBidsByAddress(address(uint160(3000)));
     }
 }
