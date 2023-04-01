@@ -3,8 +3,9 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/auctioncollection.sol";
+import "../lib/sortWinner.sol";
 
-contract AuctionCollectionTest is Test {
+contract AuctionCollectionTest is Test, SortWinner {
     AuctionCollection public ac;
     event Refund(address, uint256);
 
@@ -109,4 +110,26 @@ contract AuctionCollectionTest is Test {
         vm.expectRevert("AUC: user did not bid yet");
         ac.getBidsByAddress(address(uint160(3000)));
     }
+
+    function testDeclareWinnerScript() public {
+        address user;
+        address payable paymentReceiver = payable(address(uint160(4000)));
+
+        for (uint i = 1; i < 5001; i ++) {
+            user = address(uint160(i));
+            vm.prank(user);
+            vm.deal(user, i * 1e10);
+            ac.bid{value: i * 1e10}();
+        }
+
+        // roll to end time
+        vm.warp(1001);
+
+        uint16[] memory winnerList = getSortedWinners(ac, 512);
+        ac.declareWinners(winnerList, true);
+        ac.withdrawPayment(paymentReceiver);
+
+        assertEq(paymentReceiver.balance, 0);
+    }
+
 }
