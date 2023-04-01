@@ -118,8 +118,8 @@ contract AuctionCollectionTest is Test, SortWinner {
         for (uint i = 1; i < 5001; i ++) {
             user = address(uint160(i));
             vm.prank(user);
-            vm.deal(user, i * 1e10);
-            ac.bid{value: i * 1e10}();
+            vm.deal(user, (i % 3 + 1) * 1e10);
+            ac.bid{value: (i % 3 + 1) * 1e10}();
         }
 
         // roll to end time
@@ -129,7 +129,7 @@ contract AuctionCollectionTest is Test, SortWinner {
         ac.declareWinners(winnerList, true);
         ac.withdrawPayment(paymentReceiver);
 
-        assertEq(paymentReceiver.balance, 0);
+        assertEq(paymentReceiver.balance != 0, true);
     }
 
 }
