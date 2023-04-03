@@ -76,7 +76,7 @@ contract AuctionCollection is Ownable {
             return false;
         }
         // return isBitSet(winners[bidderIndex / 8], bidderIndex % 8);
-        return ethAddresses[bidders[bidder].index - 1] == address(0);
+        return ethAddresses[bidderIndex - 1] == address(0);
     }
 
     //  WithdrawPayment()
