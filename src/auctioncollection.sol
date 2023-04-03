@@ -22,7 +22,6 @@ contract AuctionCollection is Ownable {
     uint256 private totalPaymentWithdraw;
     bool public winnerDeclared;
     mapping(address => Bidder) private bidders;
-    mapping(address => bool) private isAccountExisted;
     address[] private ethAddresses;
 
     // events
@@ -44,8 +43,7 @@ contract AuctionCollection is Ownable {
             bidders[bidder].amount += bidAmount;
         }
 
-        if (!isAccountExisted[bidder]) {
-            isAccountExisted[bidder] = true;
+        if (bidders[bidder].index == 0) {
             ethAddresses.push(bidder);
             bidders[bidder].index = uint16(ethAddresses.length);
         }
