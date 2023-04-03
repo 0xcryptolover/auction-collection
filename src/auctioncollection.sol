@@ -12,8 +12,8 @@ contract AuctionCollection is Ownable {
     }
 
     struct Bidder {
-        uint256 amount;
-        uint16 index;
+        uint128 amount;
+        uint128 index;
     }
 
     // vars
@@ -40,12 +40,12 @@ contract AuctionCollection is Ownable {
         address bidder = msg.sender;
         require(bidAmount >= bidMinimum && block.timestamp < endTime, "AUC: auction must be open and bid amount greater than minimum");
         unchecked {
-            bidders[bidder].amount += bidAmount;
+            bidders[bidder].amount += uint128(bidAmount);
         }
 
         if (bidders[bidder].index == 0) {
             ethAddresses.push(bidder);
-            bidders[bidder].index = uint16(ethAddresses.length);
+            bidders[bidder].index = uint128(ethAddresses.length);
         }
 
         emit Bid(bidder, bidAmount);
@@ -60,7 +60,7 @@ contract AuctionCollection is Ownable {
             address temp = ethAddresses[winnerList[i]];
             require(temp != address(0), "AUC: duplicate winner");
             ethAddresses[winnerList[i]] = address(0);
-            _totalPaymentWithdraw += bidders[temp].amount;
+            _totalPaymentWithdraw += uint256(bidders[temp].amount);
         }
         winnerDeclared = isFinal;
         totalPaymentWithdraw += _totalPaymentWithdraw;
@@ -71,7 +71,7 @@ contract AuctionCollection is Ownable {
     //    }
 
     function isWinner(address bidder) internal view returns(bool) {
-        uint16 bidderIndex = bidders[bidder].index;
+        uint128 bidderIndex = bidders[bidder].index;
         if (!winnerDeclared || bidderIndex == 0) {
             return false;
         }
@@ -95,7 +95,7 @@ contract AuctionCollection is Ownable {
         require(block.timestamp >= endTime && winnerDeclared, "AUC: withdraw only after end time and winner declared");
         address bidder = msg.sender;
         require(!isWinner(bidder), "AUC: must be not a winner");
-        uint256 refundAmount = bidders[bidder].amount;
+        uint256 refundAmount = uint256(bidders[bidder].amount);
         bidders[bidder].amount = 0;
         (bool success, ) = bidder.call{value: refundAmount}("");
         require(success, "AUC: failed to refund");
@@ -114,7 +114,7 @@ contract AuctionCollection is Ownable {
         BidderResponse[] memory temp = new BidderResponse[](end - start);
         for (uint i = start; i < end; i++) {
             address tmp = ethAddresses[i];
-            temp[i] = BidderResponse(tmp, isWinner(tmp), bidders[tmp].amount);
+            temp[i] = BidderResponse(tmp, isWinner(tmp), uint256(bidders[tmp].amount));
         }
         return temp;
     }
@@ -122,6 +122,6 @@ contract AuctionCollection is Ownable {
     //  GetBidsByAddress()
     function getBidsByAddress(address bidder) external view returns(bool, uint256) {
         require(bidders[bidder].index != 0, "AUC: user did not bid yet");
-        return (isWinner(bidder), bidders[bidder].amount);
+        return (isWinner(bidder), uint256(bidders[bidder].amount));
     }
 }
