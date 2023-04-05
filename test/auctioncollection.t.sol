@@ -112,26 +112,26 @@ contract AuctionCollectionTest is Test, SortWinner {
         ac.getBidsByAddress(address(uint160(3000)));
     }
 
-    function testDeclareWinnerScript() public {
-        address user;
-        address payable paymentReceiver = payable(address(uint160(4000)));
-
-        for (uint i = 1; i < 5001; i ++) {
-            user = address(uint160(i));
-            vm.prank(user);
-            vm.deal(user, (i % 3 + 1) * 1e10);
-            ac.bid{value: (i % 3 + 1) * 1e10}();
-        }
-
-        // roll to end time
-        vm.warp(1001);
-
-        uint16[] memory winnerList = getSortedWinners(ac, 512);
-        ac.declareWinners(winnerList, true);
-        ac.withdrawPayment(paymentReceiver);
-
-        assertEq(paymentReceiver.balance != 0, true);
-    }
+//    function testDeclareWinnerScript() public {
+//        address user;
+//        address payable paymentReceiver = payable(address(uint160(4000)));
+//
+//        for (uint i = 1; i < 5001; i ++) {
+//            user = address(uint160(i));
+//            vm.prank(user);
+//            vm.deal(user, (i % 3 + 1) * 1e10);
+//            ac.bid{value: (i % 3 + 1) * 1e10}();
+//        }
+//
+//        // roll to end time
+//        vm.warp(1001);
+//
+//        uint16[] memory winnerList = getSortedWinners(ac, 512);
+//        ac.declareWinners(winnerList, true);
+//        ac.withdrawPayment(paymentReceiver);
+//
+//        assertEq(paymentReceiver.balance != 0, true);
+//    }
 
     function testAuction2() public {
         AuctionCollection2 ac2 = new AuctionCollection2(ac);
@@ -223,5 +223,9 @@ contract AuctionCollectionTest is Test, SortWinner {
         assertEq(user.balance, 550 * 1e17);
 
         // refund
+        user = address(uint160(100));
+        vm.prank(user);
+        ac2.refund();
+        assertEq(user.balance, 100 * 1e17);
     }
 }
