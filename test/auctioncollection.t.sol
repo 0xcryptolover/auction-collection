@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
 import "../src/auctioncollection.sol";
+import "../src/auctioncollection2.sol";
 import "../lib/sortWinner.sol";
 
 contract AuctionCollectionTest is Test, SortWinner {
@@ -132,4 +133,95 @@ contract AuctionCollectionTest is Test, SortWinner {
         assertEq(paymentReceiver.balance != 0, true);
     }
 
+    function testAuction2() public {
+        AuctionCollection2 ac2 = new AuctionCollection2(ac);
+        address user;
+
+        for (uint i = 1; i < 200; i ++) {
+            user = address(uint160(i));
+            vm.prank(user);
+            vm.deal(user, i * 1e17);
+            ac.bid{value: i * 1e17}();
+        }
+
+        for (uint i = 100; i < 522; i ++) {
+            user = address(uint160(i));
+            vm.prank(user);
+            vm.deal(user, i * 1e17);
+            ac2.bid{value: i * 1e17}(1e17);
+        }
+
+        // test value matches
+        user = address(uint160(150));
+        (bool isWinner, AuctionCollection2.Bidder memory bidder) = ac2.getBidsByAddress(user);
+        assertEq(bidder.index, 51);
+        assertEq(bidder.unitPrice, 1e17);
+        assertEq(bidder.quantity, 300);
+        assertEq(bidder.amount, 150 * 1e17);
+        assertEq(isWinner, false);
+
+        user = address(uint160(250));
+        (isWinner, bidder) = ac2.getBidsByAddress(user);
+        assertEq(isWinner, false);
+        assertEq(bidder.index, 151);
+        assertEq(bidder.unitPrice, 1e17);
+        assertEq(bidder.quantity, 250);
+        assertEq(bidder.amount, 250 * 1e17);
+        assertEq(isWinner, false);
+
+        user = address(uint160(1000));
+        vm.startPrank(user);
+        vm.deal(user, 20 * 1e17);
+        vm.expectRevert("AUC: auction must be open and bid amount greater than minimum");
+        ac2.bid(1e17);
+
+        vm.expectRevert("AUC: auction must be open and bid amount greater than minimum");
+        ac2.bid{value: 1e17}(1);
+
+        vm.expectRevert("AUC: invalid bid amount, unit price");
+        ac2.bid{value: 1e17}(1e10 + 1);
+
+        vm.expectRevert("AUC: invalid bid amount, unit price");
+        ac2.bid{value: 1e17}(1e10 + 1);
+
+        ac2.bid{value: 1e17}(1e17);
+
+        // buy 4 items
+        ac2.bid{value: 3e17}(1e17);
+
+        // buy 2 items
+        vm.expectRevert("AUC: invalid bid amount, unit price");
+        ac2.bid(2e17);
+
+        vm.expectRevert("AUC: invalid bid amount, unit price");
+        ac2.bid{value: 1e16}(1e17);
+
+        vm.expectRevert("AUC: invalid bid amount, unit price");
+        ac2.bid{value: 1e17}(1e16);
+
+        // roll to end time
+        vm.warp(1001);
+        vm.expectRevert("AUC: auction must be open and bid amount greater than minimum");
+        ac2.bid{value: 1e17}(1e17);
+        vm.stopPrank();
+
+        // declare winners
+        uint32[] memory winners = new uint32[](2);
+        winners[0] = 50;
+        winners[1] = 150;
+        ac2.declareWinners(winners, true);
+
+        // withdraw money
+        user = address(uint160(2000));
+        ac2.withdrawPayment(payable(user));
+        assertEq(user.balance, 400 * 1e17);
+
+        uint16[] memory winners2 = new uint16[](1);
+        winners2[0] = 149;
+        ac.declareWinners(winners2, true);
+        ac.withdrawPayment(payable(user));
+        assertEq(user.balance, 550 * 1e17);
+
+        // refund
+    }
 }
