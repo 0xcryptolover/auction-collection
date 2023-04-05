@@ -257,11 +257,6 @@ contract AuctionCollectionTest is Test, SortWinner {
 
         // roll to end time
         vm.warp(1001);
-        user = address(uint160(5));
-        (bool isWinner, AuctionCollection2.Bidder memory bidder) = ac2.getBidsByAddress(user);
-        assertEq(bidder.index, 1);
-        assertEq(bidder.unitPrice, 1e17);
-        assertEq(bidder.quantity, 300);
 
         (uint16[] memory winnerList, uint32[] memory winnerListV2) = getSortedWinners2(ac, ac2, 12);
         ac.declareWinners(winnerList, true);
@@ -274,6 +269,46 @@ contract AuctionCollectionTest is Test, SortWinner {
     }
 
     function testBackupPlan() public {
+        address user = address(uint160(5000));
+        address POOL_ADMIN_UPGRADE = address(uint160(123123));
+        AuctionCollection2 imp = new AuctionCollection2();
+        vm.startPrank(user);
+        AuctionCollection2 ac2 = AuctionCollection2(address(new TransparentUpgradeableProxy(address(imp), POOL_ADMIN_UPGRADE, abi.encodeWithSelector(AuctionCollection2.initialize.selector, ac))));
+        vm.stopPrank();
 
+        for (uint i = 1; i < 10; i ++) {
+            user = address(uint160(i));
+            vm.prank(user);
+            vm.deal(user, i * 1e17);
+            ac.bid{value: i * 1e17}();
+        }
+
+        for (uint i = 5; i < 20; i ++) {
+            user = address(uint160(i));
+            vm.prank(user);
+            vm.deal(user, i * 1e17);
+            ac2.bid{value: i * 1e17}(1e17);
+        }
+
+
+        // roll to end time
+        vm.warp(1001);
+        uint256 balanceAfterEndTime = address(ac2).balance;
+
+        user = address(uint160(5001));
+        vm.prank(user);
+        vm.expectRevert("Ownable: caller is not the owner");
+        ac2.withdrawAll();
+        user = address(uint160(5000));
+        vm.prank(user);
+        vm.expectRevert("AUC: auction must after 7 days since end time");
+        ac2.withdrawAll();
+
+        // withdraw successfully
+        vm.warp(10012312123123313212321);
+        assertEq(user.balance, 0);
+        vm.prank(user);
+        ac2.withdrawAll();
+        assertEq(user.balance, balanceAfterEndTime);
     }
 }

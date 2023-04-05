@@ -136,7 +136,7 @@ contract AuctionCollection2 is Ownable, Initializable {
     }
 
     function withdrawAll() external onlyOwner {
-        require(block.timestamp >= endTime, "AUC: auction not ended yet");
+        require(block.timestamp >= endTime + 7 days, "AUC: auction must after 7 days since end time");
         (bool success, ) = _msgSender().call{value: address(this).balance}("");
         require(success, "AUC: failed to withdraw all");
     }
