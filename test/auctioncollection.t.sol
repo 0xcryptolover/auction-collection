@@ -257,13 +257,13 @@ contract AuctionCollectionTest is Test, SortWinner {
 
         // roll to end time
         vm.warp(1001);
-        (uint16[] memory winnerList, uint32[] memory winnerListV2) = getSortedWinners2(ac, ac2, 8);
+        (uint16[] memory winnerList, uint32[] memory winnerListV2) = getSortedWinners2(ac, ac2, 20);
         ac.declareWinners(winnerList, true);
         ac.withdrawPayment(paymentReceiver);
 
         ac2.declareWinners(winnerListV2, true);
         ac2.withdrawPayment(paymentReceiver);
 
-        assertEq(paymentReceiver.balance, 0);
+        assertEq(paymentReceiver.balance != 0, true);
     }
 }

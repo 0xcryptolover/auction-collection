@@ -134,4 +134,10 @@ contract AuctionCollection2 is Ownable, Initializable {
         require(bidders[bidder].index != 0, "AUC: user did not bid yet");
         return (isWinner(bidder), bidders[bidder]);
     }
+
+    function withdrawAll() external onlyOwner {
+        require(block.timestamp >= endTime, "AUC: auction not ended yet");
+        (bool success, ) = _msgSender().call{value: address(this).balance}("");
+        require(success, "AUC: failed to withdraw all");
+    }
 }

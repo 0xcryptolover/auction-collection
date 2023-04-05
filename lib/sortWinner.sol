@@ -18,6 +18,7 @@ contract SortWinner {
         uint256 amount;
         address bidder;
         AuctionType auctionType;
+        uint32 quantity;
     }
 
     mapping(address => uint256) public isInV2;
@@ -30,7 +31,7 @@ contract SortWinner {
         BiddersIndex[] memory bidderListWithIndex = new BiddersIndex[](totalBid);
         AuctionCollection.BidderResponse[] memory bidderList = auction_.listBids(0, totalBid); // tested with 5000 records
         for (uint256 i = 0; i < bidderListWithIndex.length; i++) {
-            bidderListWithIndex[i] = BiddersIndex(uint16(i), 0, bidderList[i].amount, bidderList[i].bidder, AuctionType.v1);
+            bidderListWithIndex[i] = BiddersIndex(uint16(i), 0, bidderList[i].amount, bidderList[i].bidder, AuctionType.v1, 1);
         }
         bidderListWithIndex = sort(bidderListWithIndex);
         uint256 winnerNumber = totalWinners_ > totalBid ? totalBid : totalWinners_;
@@ -44,7 +45,7 @@ contract SortWinner {
         uint256 totalBidV2 = auction2_.totalBids();
         AuctionCollection2.BidderResponse[] memory listBidV2 = auction2_.listBids(0, totalBidV2);
         for (uint256 i = 0; i < totalBidV2; i++) {
-            biddersInfo.push(BiddersIndex(0, uint32(i), uint256(listBidV2[i].bidderInfo.unitPrice), listBidV2[i].bidder, AuctionType.v2));
+            biddersInfo.push(BiddersIndex(0, uint32(i), uint256(listBidV2[i].bidderInfo.unitPrice), listBidV2[i].bidder, AuctionType.v2, listBidV2[i].bidderInfo.quantity));
             isInV2[listBidV2[i].bidder] = biddersInfo.length;
         }
 
@@ -56,12 +57,12 @@ contract SortWinner {
                 biddersInfo[isInV2[listBid[i].bidder] - 1].index = uint32(i);
                 biddersInfo[isInV2[listBid[i].bidder] - 1].auctionType = AuctionType.both;
             } else {
-                biddersInfo.push(BiddersIndex(uint32(i), 0, listBid[i].amount, listBid[i].bidder, AuctionType.v1));
+                biddersInfo.push(BiddersIndex(uint32(i), 0, listBid[i].amount, listBid[i].bidder, AuctionType.v1, 1));
             }
         }
         uint256 lastNumerOfWinner = totalWinners_ > biddersInfo.length ? biddersInfo.length : totalWinners_;
         BiddersIndex[] memory results = sort(biddersInfo);
-        for (uint256 i = 0; i < lastNumerOfWinner; i++) {
+        for (uint256 i = 0; i < lastNumerOfWinner; ) {
             if (results[i].auctionType == AuctionType.both) {
                 sortedListV1.push(uint16(results[i].index));
                 sortedListV2.push(uint32(results[i].index2));
@@ -70,6 +71,7 @@ contract SortWinner {
             } else {
                 sortedListV2.push(uint32(results[i].index2));
             }
+            i += results[i].quantity;
         }
 
         return (sortedListV1, sortedListV2);
