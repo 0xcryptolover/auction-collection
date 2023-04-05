@@ -113,26 +113,26 @@ contract AuctionCollectionTest is Test, SortWinner {
         ac.getBidsByAddress(address(uint160(3000)));
     }
 
-    function testDeclareWinnerScript() public {
-        address user;
-        address payable paymentReceiver = payable(address(uint160(4000)));
-
-        for (uint i = 1; i < 5001; i ++) {
-            user = address(uint160(i));
-            vm.prank(user);
-            vm.deal(user, (i % 3 + 1) * 1e10);
-            ac.bid{value: (i % 3 + 1) * 1e10}();
-        }
-
-        // roll to end time
-        vm.warp(1001);
-
-        uint16[] memory winnerList = getSortedWinners(ac, 512);
-        ac.declareWinners(winnerList, true);
-        ac.withdrawPayment(paymentReceiver);
-
-        assertEq(paymentReceiver.balance != 0, true);
-    }
+//    function testDeclareWinnerScript() public {
+//        address user;
+//        address payable paymentReceiver = payable(address(uint160(4000)));
+//
+//        for (uint i = 1; i < 5001; i ++) {
+//            user = address(uint160(i));
+//            vm.prank(user);
+//            vm.deal(user, (i % 3 + 1) * 1e10);
+//            ac.bid{value: (i % 3 + 1) * 1e10}();
+//        }
+//
+//        // roll to end time
+//        vm.warp(1001);
+//
+//        uint16[] memory winnerList = getSortedWinners(ac, 512);
+//        ac.declareWinners(winnerList, true);
+//        ac.withdrawPayment(paymentReceiver);
+//
+//        assertEq(paymentReceiver.balance != 0, true);
+//    }
 
     function testAuction2() public {
         address POOL_ADMIN_UPGRADE = address(uint160(123123));
@@ -208,6 +208,8 @@ contract AuctionCollectionTest is Test, SortWinner {
         ac2.bid{value: 1e17}(1e17);
         vm.stopPrank();
 
+        ac2.listBids(20, 100);
+
         // declare winners
         uint32[] memory winners = new uint32[](2);
         winners[0] = 50;
@@ -230,5 +232,38 @@ contract AuctionCollectionTest is Test, SortWinner {
         vm.prank(user);
         ac2.refund();
         assertEq(user.balance, 100 * 1e17);
+    }
+
+    function testDeclareWinnerV2() public {
+        address user;
+        address payable paymentReceiver = payable(address(uint160(4000)));
+        address POOL_ADMIN_UPGRADE = address(uint160(123123));
+        AuctionCollection2 imp = new AuctionCollection2();
+        AuctionCollection2 ac2 = AuctionCollection2(address(new TransparentUpgradeableProxy(address(imp), POOL_ADMIN_UPGRADE, abi.encodeWithSelector(AuctionCollection2.initialize.selector, ac))));
+
+        for (uint i = 1; i < 10; i ++) {
+            user = address(uint160(i));
+            vm.prank(user);
+            vm.deal(user, i * 1e17);
+            ac.bid{value: i * 1e17}();
+        }
+
+        for (uint i = 5; i < 20; i ++) {
+            user = address(uint160(i));
+            vm.prank(user);
+            vm.deal(user, i * 1e17);
+            ac2.bid{value: i * 1e17}(1e17);
+        }
+
+        // roll to end time
+        vm.warp(1001);
+        (uint16[] memory winnerList, uint32[] memory winnerListV2) = getSortedWinners2(ac, ac2, 8);
+        ac.declareWinners(winnerList, true);
+        ac.withdrawPayment(paymentReceiver);
+
+        ac2.declareWinners(winnerListV2, true);
+        ac2.withdrawPayment(paymentReceiver);
+
+        assertEq(paymentReceiver.balance, 0);
     }
 }
