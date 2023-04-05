@@ -2,10 +2,11 @@
 pragma solidity ^0.8.0;
 import "openzeppelin-contracts/contracts/access/Ownable.sol";
 import "./auctioncollection.sol";
+import "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 
-contract AuctionCollection2 is Ownable {
+contract AuctionCollection2 is Ownable, Initializable {
     uint256 public constant MAX_WINNERS = 512;
-    address immutable public singleAuction;
+    address public singleAuction;
 
     struct BidderResponse {
         address bidder;
@@ -28,10 +29,14 @@ contract AuctionCollection2 is Ownable {
     mapping(address => Bidder) private bidders;
     address[] private ethAddresses;
 
-    constructor(AuctionCollection singleAuction_) {
+    // initializer
+    function initialize(
+        AuctionCollection singleAuction_
+    ) external initializer {
         endTime = singleAuction_.endTime();
         bidMinimum = singleAuction_.bidMinimum();
         singleAuction = address(singleAuction_);
+        _transferOwnership(_msgSender());
     }
 
     //    Bid(btc address, eth amount) // check min bid amount
