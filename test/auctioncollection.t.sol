@@ -257,13 +257,23 @@ contract AuctionCollectionTest is Test, SortWinner {
 
         // roll to end time
         vm.warp(1001);
-        (uint16[] memory winnerList, uint32[] memory winnerListV2) = getSortedWinners2(ac, ac2, 20);
+        user = address(uint160(5));
+        (bool isWinner, AuctionCollection2.Bidder memory bidder) = ac2.getBidsByAddress(user);
+        assertEq(bidder.index, 1);
+        assertEq(bidder.unitPrice, 1e17);
+        assertEq(bidder.quantity, 300);
+
+        (uint16[] memory winnerList, uint32[] memory winnerListV2) = getSortedWinners2(ac, ac2, 12);
         ac.declareWinners(winnerList, true);
         ac.withdrawPayment(paymentReceiver);
 
         ac2.declareWinners(winnerListV2, true);
         ac2.withdrawPayment(paymentReceiver);
 
-        assertEq(paymentReceiver.balance != 0, true);
+        assertEq(paymentReceiver.balance != 0, true );
+    }
+
+    function testBackupPlan() public {
+
     }
 }

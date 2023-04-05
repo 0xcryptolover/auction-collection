@@ -44,9 +44,11 @@ contract SortWinner {
     function getSortedWinners2(AuctionCollection auction_, AuctionCollection2 auction2_, uint256 totalWinners_) public returns (uint16[] memory sortedList, uint32[] memory sortedList2) {
         uint256 totalBidV2 = auction2_.totalBids();
         AuctionCollection2.BidderResponse[] memory listBidV2 = auction2_.listBids(0, totalBidV2);
+        uint256 totalQty;
         for (uint256 i = 0; i < totalBidV2; i++) {
             biddersInfo.push(BiddersIndex(0, uint32(i), uint256(listBidV2[i].bidderInfo.unitPrice), listBidV2[i].bidder, AuctionType.v2, listBidV2[i].bidderInfo.quantity));
             isInV2[listBidV2[i].bidder] = biddersInfo.length;
+            totalQty += listBidV2[i].bidderInfo.quantity;
         }
 
         // get v1
@@ -58,11 +60,14 @@ contract SortWinner {
                 biddersInfo[isInV2[listBid[i].bidder] - 1].auctionType = AuctionType.both;
             } else {
                 biddersInfo.push(BiddersIndex(uint32(i), 0, listBid[i].amount, listBid[i].bidder, AuctionType.v1, 1));
+                totalQty++;
             }
         }
-        uint256 lastNumerOfWinner = totalWinners_ > biddersInfo.length ? biddersInfo.length : totalWinners_;
+        uint256 lastNumerOfWinner = totalWinners_ > totalQty ? totalQty : totalWinners_;
+
         BiddersIndex[] memory results = sort(biddersInfo);
-        for (uint256 i = 0; i < lastNumerOfWinner; ) {
+        uint counted;
+        for (uint256 i = 0; i < results.length && counted <= lastNumerOfWinner; i++) {
             if (results[i].auctionType == AuctionType.both) {
                 sortedListV1.push(uint16(results[i].index));
                 sortedListV2.push(uint32(results[i].index2));
@@ -71,7 +76,7 @@ contract SortWinner {
             } else {
                 sortedListV2.push(uint32(results[i].index2));
             }
-            i += results[i].quantity;
+            counted += results[i].quantity;
         }
 
         return (sortedListV1, sortedListV2);
