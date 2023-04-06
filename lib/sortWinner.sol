@@ -67,7 +67,7 @@ contract SortWinner {
 
         BiddersIndex[] memory results = sort(biddersInfo);
         uint counted;
-        for (uint256 i = 0; i < results.length && counted <= lastNumerOfWinner; i++) {
+        for (uint256 i = 0; i < results.length && counted < lastNumerOfWinner; i++) {
             if (results[i].auctionType == AuctionType.both) {
                 sortedListV1.push(uint16(results[i].index));
                 sortedListV2.push(uint32(results[i].index2));
