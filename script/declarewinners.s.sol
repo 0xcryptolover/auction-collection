@@ -31,12 +31,15 @@ contract DeclareWinnersScript is Script, SortWinner {
         auction.declareWinners(winnerList, true);
 
         // withdraw payment
-        auction.withdrawPayment(paymentAddress);
-
+        if (winnerList.length > 0) {
+            auction.withdrawPayment(paymentAddress);
+        }
         // @dev v2
         auction2.declareWinners(winnerList2, true);
 
         // withdraw payment
-        auction2.withdrawPayment(paymentAddress);
+        if (winnerList2.length > 0) {
+            auction2.withdrawPayment(paymentAddress);
+        }
     }
 }
