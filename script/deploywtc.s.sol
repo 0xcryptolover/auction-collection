@@ -19,8 +19,7 @@ contract DeployWTC is Script, SortWinner {
 
         if (keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("tc"))) {
             // tc
-            uint256 fee = vm.envUint("FEE");
-            new TC(fee);
+            new TC();
         } else if (keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked("goerli"))) {
             // goerli
             new WTC();
