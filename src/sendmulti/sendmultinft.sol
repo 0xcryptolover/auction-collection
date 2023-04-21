@@ -26,4 +26,22 @@ contract SendMultiNft {
             }
         }
     }
+
+    function sendMulti(IERC721 token, address[] memory recipients, uint[] memory ids) external {
+        require(recipients.length == ids.length, "SendMulti: mismatch input params");
+
+        address from = msg.sender;
+        for (uint i = 0; i < recipients.length; i++) {
+            token.transferFrom(from, recipients[i], ids[i]);
+        }
+    }
+
+    function safeSendMulti(IERC721 token, address[] memory recipients, uint[] memory ids) external {
+        require(recipients.length == ids.length, "SendMulti: mismatch input params");
+
+        address from = msg.sender;
+        for (uint i = 0; i < recipients.length; i++) {
+            token.safeTransferFrom(from, recipients[i], ids[i]);
+        }
+    }
 }

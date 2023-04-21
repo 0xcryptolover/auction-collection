@@ -22,6 +22,9 @@ contract SendMulti is Test {
         col1.mint(USER_1);
         col1.mint(USER_1);
         col1.mint(USER_1);
+        col1.mint(USER_1);
+        col1.mint(USER_1);
+        col1.mint(USER_1);
 
         col2 = new ERC721PresetMinterPauserAutoId("nft2", "2", "tc.com/");
         col2.mint(USER_2);
@@ -29,6 +32,9 @@ contract SendMulti is Test {
         col2.mint(USER_2);
         col2.mint(USER_1);
         col2.mint(USER_1);
+        col2.mint(USER_2);
+        col2.mint(USER_2);
+        col2.mint(USER_2);
     }
 
     function testTransfer() public {
@@ -82,5 +88,24 @@ contract SendMulti is Test {
         assertEq(col2.ownerOf(2), USER_4);
 
         vm.stopPrank();
+
+        // test overload
+        // collection 1: 3 4 5
+        // collection 2: 5 6 7
+        uint[] memory ids = new uint[](3);
+        ids[0] = 3;
+        ids[1] = 4;
+        ids[2] = 5;
+
+        address[] memory recipients = new address[](3);
+        recipients[0] = USER_3;
+        recipients[1] = USER_4;
+        recipients[2] = USER_3;
+
+        vm.prank(USER_1);
+        smn.safeSendMulti(col1, recipients, ids);
+        assertEq(col1.ownerOf(3), USER_3);
+        assertEq(col1.ownerOf(4), USER_4);
+        assertEq(col1.ownerOf(5), USER_3);
     }
 }
